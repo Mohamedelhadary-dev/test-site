@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exam Pro MVP - Fixed & Verified</title>
+<style>
+    :root { --primary: #2563EB; --success: #22C55E; --danger: #EF4444; --bg: #F5F7FB; }
+    body { margin:0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #1E293B; }
+    .container { max-width: 850px; margin: auto; padding: 20px; }
+    .card { background: white; padding: 24px; border-radius: 20px; margin-top: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; margin-bottom: 10px; }
+    .option { padding: 15px; margin-top: 10px; border-radius: 12px; border: 1px solid #E2E8F0; cursor: pointer; transition: 0.2s; }
+    .selected { background: #E8F0FF; border: 2px solid var(--primary); color: var(--primary); font-weight: 600; }
+    .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; margin-top: 10px; font-weight: 700; cursor: pointer; font-size: 16px; }
+    .next { background: var(--primary); color: white; }
+    .submit { background: var(--success); color: white; }
+    .timer { position: fixed; top: 15px; right: 15px; background: white; padding: 10px 15px; border-radius: 15px; border: 1px solid #ddd; font-weight: 800; z-index: 100; color: var(--primary); }
+    .weak-card { border-left: 6px solid var(--danger); background: #FFF5F5; margin-bottom: 15px; padding: 15px; border-radius: 10px; }
+    .revise-list { margin: 8px 0; padding-left: 20px; color: #7F1D1D; }
+    .explanation-img { width: 100%; max-width: 450px; border-radius: 12px; margin-top: 15px; display: block; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .ref-tag { display: inline-block; margin-top: 12px; padding: 6px 12px; background: #DBEAFE; border-radius: 8px; text-decoration: none; color: #1E40AF; font-size: 13px; font-weight: bold; border: 1px solid #BFDBFE; }
+</style>
+</head>
+<body>
+
+<div class="timer">⏱ <span id="time">00:00</span></div>
+
+<div class="container">
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="card">
+        <h2 style="margin-top:0">Exam Pro <span style="color:var(--primary)">v1.2</span></h2>
+        <input id="username" placeholder="Student/Doctor Name">
+        <button class="btn next" onclick="navTo('med')">🧠 Medicine Track</button>
+        <button class="btn next" style="background:#64748B" onclick="navTo('dentist')">🦷 Dentist Track</button>
+        <button class="btn next" style="background:#10B981" onclick="startQuiz('pharma')">💊 Pharmacy Track</button>
+    </div>
+
+    <!-- MODE SCREEN -->
+    <div id="mode-screen" class="card" style="display:none">
+        <h3 id="modeTitle">Select Focus Area</h3>
+        <button class="btn next" onclick="startSub('academic')">📘 Academic Basics</button>
+        <button class="btn next" onclick="startSub('clinical')">🏥 Clinical Cases</button>
+    </div>
+
+    <!-- QUIZ INTERFACE -->
+    <div id="quiz-screen" style="display:none">
+        <div id="quiz-container"></div>
+        <button id="next-btn" class="btn next" onclick="nextQ()">Next Question</button>
+        <button id="submit-btn" class="btn submit" style="display:none" onclick="finish()">Submit & Analyze</button>
+    </div>
+
+    <!-- RESULTS DASHBOARD -->
+    <div id="result-screen" style="display:none">
+        <div id="score-box" class="card" style="text-align:center"></div>
+        <div id="weak-points"></div>
+        <h3 style="margin-top:30px">Full Question Review</h3>
+        <div id="review-box"></div>
+        <button class="btn next" onclick="location.reload()">Start New Session</button>
+    </div>
+</div>
+
+<script>
+let user="", track="", activeQ=[], current=0, answers=[], timerStart, running=false;
+
+const banks = {
+    /* MEDICINE TRACKS */
+    med_academic: [
+        {q:"Site of sperm storage and functional maturation?", opt:["Epididymis","Testis","Seminal vesicle","Prostate"], ans:0, topic:"Reproductive", ex:"The epididymis is where sperm gain motility.", weak:"Confused storage vs production.", rev:["Testis = Sperm production","Epididymis = Maturation/Storage"], ref:"https://pubmed.ncbi.nlm.nih.gov/11267439/", img:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Testis_Anatomy.png/400px-Testis_Anatomy.png"},
+        {q:"Which embryonic stage enters the uterine cavity?", opt:["Zygote","Morula","Blastocyst","Fetus"], ans:1, topic:"Embryology", ex:"Morula typically enters on Day 4.", weak:"Inaccurate developmental timeline.", rev:["Day 1: Zygote","Day 4: Morula","Day 5: Blastocyst"], ref:"https://pubmed.ncbi.nlm.nih.gov/embryology-timeline/"},
+        {q:"Derivation of the vertebral column?", opt:["Sclerotome","Myotome","Dermatome","Endoderm"], ans:0, topic:"Somites", ex:"Sclerotome forms bone and cartilage.", weak:"Weakness in somite differentiation.", rev:["Sclerotome = Bone","Myotome = Muscle"], ref:"#"},
+        {q:"Genotype of Klinefelter Syndrome?", opt:["45,X","47,XXY","47,XYY","47,XXX"], ans:1, topic:"Genetics", ex:"Presence of an extra X chromosome in males.", weak:"Chromosomal aneuploidy confusion.", rev:["Klinefelter = XXY","Turner = X0"], ref:"https://www.nhs.uk/conditions/klinefelters-syndrome/"},
+        {q:"Primary villi consist of?", opt:["Syncytiotrophoblast and Cytotrophoblast","Cytotrophoblast and Mesoderm","Syncytiotrophoblast only","Mesoderm and Vessels"], ans:0, topic:"Placental Histology", ex:"Primary villi have no mesodermal core yet.", weak:"Weak in placental development stages.", rev:["Primary = 2 layers","Secondary = +Mesoderm","Tertiary = +Vessels"], ref:"#"},
+        {q:"Start of spermatogenesis?", opt:["At Birth","At Puberty","Intrauterine","Age 7"], ans:1, topic:"Endocrinology", ex:"Triggered by GnRH at puberty.", weak:"Trigger timing error.", rev:["Male = Puberty","Female = Prenatal"], ref:"#"},
+        {q:"Example of a Diploid (2n) cell:", opt:["Oogonium","Secondary Oocyte","Mature Ovum","Spermatid"], ans:0, topic:"Cell Bio", ex:"Oogonia are pre-meiotic and diploid.", weak:"Ploidy classification error.", rev:["-Gonia = Diploid","-Oocyte/Tid = Haploid"], ref:"#"},
+        {q:"Cranial-most structure in the early embryo?", opt:["Septum Transversum","Forebrain","Heart","Prochordal Plate"], ans:1, topic:"Orientation", ex:"Folding puts the forebrain most cranial.", weak:"Anatomical orientation error.", rev:["Forebrain position vs Heart"], ref:"#"},
+        {q:"Twins joined at the chest wall?", opt:["Thoracopagus","Craniopagus","Pygopagus","Ischiopagus"], ans:0, topic:"Congenital", ex:"Thoraco- means chest.", weak:"Conjoined twin terminology.", rev:["Thoraco = Chest","Cranio = Head"], ref:"#"},
+        {q:"First polar body is a product of:", opt:["Meiosis I","Meiosis II","Mitosis","Fertilization"], ans:0, topic:"Meiosis", ex:"Formed during the first meiotic division.", weak:"Female gametogenesis error.", rev:["PB 1 = Meiosis I","PB 2 = Fertilization"], ref:"#"}
+    ],
+    med_clinical: [
+        {q:"Painless vaginal bleeding in a 32-week pregnant woman?", opt:["Abruptio Placentae","Placenta Previa","Vasa Previa","Uterine Rupture"], ans:1, topic:"Obstetrics", ex:"Placenta Previa is classically painless.", weak:"Mixed up obstetric bleeding types.", rev:["Previa = Painless","Abruption = Painful"], ref:"https://pubmed.ncbi.nlm.nih.gov/30020616/", img:"https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Placenta_previa.png/400px-Placenta_previa.png"},
+        {q:"Patient presents with small testes, tall stature, and gynecomastia?", opt:["Turner","Klinefelter","Down","Edward"], ans:1, topic:"Clinical Genetics", ex:"Classical Klinefelter presentation.", weak:"Syndrome recognition error.", rev:["XXY = Tall, Gynecomastia"], ref:"#"},
+        {q:"A Day 5 embryo is best described as:", opt:["Morula","Zygote","Blastocyst","Neurula"], ans:2, topic:"Development", ex:"Blastocyst forms by day 5.", weak:"Developmental stage error.", rev:["Day 5 = Blastocyst"], ref:"#"},
+        {q:"Most common site for ectopic pregnancy?", opt:["Ovary","Ampulla of Fallopian Tube","Cervix","Abdomen"], ans:1, topic:"Clinical OBGYN", ex:"Ampulla accounts for ~95% of cases.", weak:"Anatomical location error.", rev:["Ampulla is most common"], ref:"#"},
+        {q:"Twins fused at the sacrum/lower spine?", opt:["Pygopagus","Thoracopagus","Craniopagus","Omphalopagus"], ans:0, topic:"Clinical Congenital", ex:"Pygopagus is sacral fusion.", weak:"Twin classification error.", rev:["Pygo = Sacrum"], ref:"#"},
+        {q:"Clinical sign of Morula stage:", opt:["Fluid cavity present","12-16 blastomeres","Implantation starts","Heart beat"], ans:1, topic:"Embryo", ex:"Morula is the 'mulberry' 16-cell stage.", weak:"Stage description error.", rev:["Morula = Solid ball"], ref:"#"},
+        {q:"Vascularized placental villi are called:", opt:["Primary","Secondary","Tertiary","Quaternary"], ans:2, topic:"Placenta", ex:"Vessels appear in Tertiary villi.", weak:"Histology progression error.", rev:["Tertiary = Vessels"], ref:"#"},
+        {q:"Spermatogenesis occurs in:", opt:["Seminiferous Tubules","Epididymis","Vas Deferens","Prostate"], ans:0, topic:"Anatomy", ex:"Occurs within the tubules.", weak:"Site error.", rev:["Tubules = Site"], ref:"#"},
+        {q:"Genotype 45,X0 represents:", opt:["Turner Syndrome","Klinefelter","Noonan","Down"], ans:0, topic:"Genetics", ex:"Turner is the loss of one X.", weak:"Genotype mismatch.", rev:["X0 = Turner"], ref:"#"},
+        {q:"Joined at the skull vertex?", opt:["Craniopagus","Pygopagus","Ischiopagus","Thoracopagus"], ans:0, topic:"Twins", ex:"Cranio = Head.", weak:"Twin term error.", rev:["Cranio = Head"], ref:"#"}
+    ],
+
+    /* DENTIST TRACKS */
+    dentist_academic: [
+        {q:"Primary bacteria associated with root caries?", opt:["S. mutans","Actinomyces","Lactobacilli","S. mitis"], ans:1, topic:"Microbiology", ex:"Actinomyces is the dominant species in root surfaces.", weak:"Microbiology identification error.", rev:["Root Caries = Actinomyces"], ref:"https://pubmed.ncbi.nlm.nih.gov/1505315/"},
+        {q:"The Stephan Curve illustrates:", opt:["Plaque thickness","pH changes over time","Enamel hardness","Saliva flow"], ans:1, topic:"Cariology", ex:"It tracks the drop and recovery of plaque pH.", weak:"Concept error.", rev:["Stephan Curve = Acid/pH"], ref:"#", img:"https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Stephan_Curve.png/400px-Stephan_Curve.png"},
+        {q:"Caries spreads laterally most rapidly at:", opt:["Surface Enamel","DEJ","Inner Dentin","Pulp Floor"], ans:1, topic:"Pathology", ex:"The Dentino-Enamel Junction is a weak point.", weak:"Caries progression error.", rev:["DEJ = Lateral Spread"], ref:"#"},
+        {q:"Nursing bottle caries is a form of:", opt:["Chronic caries","Arrested caries","Rampant caries","Recurrent caries"], ans:2, topic:"Pediatric", ex:"ECC is often rapid and widespread.", weak:"Classification error.", rev:["ECC = Rampant"], ref:"#"},
+        {q:"Most common chronic periapical lesion?", opt:["Periapical Abscess","Dental Granuloma","Radicular Cyst","Cementoma"], ans:1, topic:"Pathology", ex:"Granulomas are more frequent than cysts.", weak:"Prevalence error.", rev:["Granuloma is #1"], ref:"#"},
+        {q:"A 'Sequestrum' is defined as:", opt:["New bone","Dead bone","Soft tissue","Tumor"], ans:1, topic:"Osteomyelitis", ex:"Dead bone separated from living bone.", weak:"Terminology error.", rev:["Sequestrum = Dead bone"], ref:"#"},
+        {q:"Pain that increases when lying down suggests:", opt:["Reversible Pulpitis","Acute Pulpitis","Chronic Abscess","Gingivitis"], ans:1, topic:"Diagnosis", ex:"Pulpal pressure increases with blood flow to head.", weak:"Diagnosis error.", rev:["Night Pain = Irrevers./Acute"], ref:"#"},
+        {q:"Microorganism-free zone in caries:", opt:["Infected dentin","Decalcified dentin","Zone of destruction","Necrosis"], ans:1, topic:"Histology", ex:"Decalcified zone has acid but no bacteria yet.", weak:"Histology error.", rev:["Decalcified = Sterile"], ref:"#"},
+        {q:"Dry socket is clinically known as:", opt:["Alveolar Osteitis","Osteomyelitis","Cellulitis","Trismus"], ans:0, topic:"Surgery", ex:"Loss of the blood clot.", weak:"Clinical term error.", rev:["Dry Socket = Osteitis"], ref:"#"},
+        {q:"Epithelial Rests of Malassez are found in:", opt:["Granulomas","Radicular Cysts","Healthy Pulp","Enamel"], ans:1, topic:"Pathology", ex:"These rests can form the cyst lining.", weak:"Pathology cell error.", rev:["Malassez = Cyst"], ref:"#"}
+    ],
+    dentist_clinical: [
+        {q:"60yo smoker with exposed roots and decay. Main organism?", opt:["Actinomyces","S. Mutans","P. Gingivalis","S. Aureus"], ans:0, topic:"Root Caries", ex:"Root surface caries involve Actinomyces.", weak:"Root flora identification.", rev:["Root = Actinomyces"], ref:"#", img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Root_Caries.jpg/400px-Root_Caries.jpg"},
+        {q:"Severe pain 3 days after lower molar extraction, foul odor:", opt:["Dry Socket","Normal healing","Infection","Nerve damage"], ans:0, topic:"Post-op", ex:"Classic presentation of Alveolar Osteitis.", weak:"Post-op complication diagnosis.", rev:["Post-op Pain = Dry Socket"], ref:"#"},
+        {q:"Sharp, lingering pain to cold/heat, keeps patient awake:", opt:["Reversible Pulpitis","Irreversible Pulpitis","Necrosis","Sclerosis"], ans:1, topic:"Pulp", ex:"Spontaneous night pain is irreversible.", weak:"Pulp status error.", rev:["Night Pain = Irreversible"], ref:"#"},
+        {q:"Radiograph shows radio-opaque fragment in a lucent area of bone:", opt:["Sequestrum","Involucrum","Osteoma","Odontoma"], ans:0, topic:"Radiology", ex:"Radiographic appearance of sequestrum in osteomyelitis.", weak:"Radiographic term error.", rev:["Dead fragment = Sequestrum"], ref:"https://radiopaedia.org/articles/sequestrum"},
+        {q:"Child with decay on all upper incisors, lower incisors spared:", opt:["ECC","Chronic caries","Fluorosis","Hypoplasia"], ans:0, topic:"Pedo", ex:"Nursing bottle pattern spares lower teeth (tongue coverage).", weak:"ECC pattern recognition.", rev:["Upper front decay = ECC"], ref:"#"},
+        {q:"Pinkish flesh growing out of a large carious molar:", opt:["Pulp Polyp","Abscess","Cyst","Epulis"], ans:0, topic:"Pulp", ex:"Chronic Hyperplastic Pulpitis (Pulp Polyp).", weak:"Diagnosis error.", rev:["Pulp Polyp = Flesh in tooth"], ref:"#"},
+        {q:"Which zone of dentinal caries contains no bacteria?", opt:["Transparent/Sclerotic","Infected","Necrotic","Destruction"], ans:0, topic:"Histology", ex:"Transparent zone is a reaction, no bacteria.", weak:"Dentin zones error.", rev:["Transparent = No bacteria"], ref:"#"},
+        {q:"Best treatment for dry socket?", opt:["Antibiotics","Irrigation & Dressing","Re-extraction","Curettage"], ans:1, topic:"Surgery", ex:"Irrigation and Alveogyl/Dressing is standard.", weak:"Management error.", rev:["Dry socket = Wash & Dress"], ref:"#"},
+        {q:"A fluid-filled sac at the apex of a non-vital tooth:", opt:["Granuloma","Radicular Cyst","Abscess","Ameloblastoma"], ans:1, topic:"Pathology", ex:"Cysts are fluid filled/lined by epithelium.", weak:"Lesion type error.", rev:["Fluid = Cyst"], ref:"#"},
+        {q:"Pain on percussion usually indicates:", opt:["Pulpitis","Periapical inflammation","Caries","Gingivitis"], ans:1, topic:"Clinical", ex:"Percussion tests the PDL/periapical status.", weak:"Clinical test error.", rev:["Percussion = Periapical"], ref:"#"}
+    ],
+    pharma: [
+        {q:"Main glucose transporter in the liver?", opt:["GLUT1","GLUT2","GLUT4","SGLT1"], ans:1, topic:"Transporters", ex:"GLUT2 is a high-capacity transporter.", weak:"Transporter error.", rev:["Liver = GLUT2"], ref:"#"},
+        {q:"SGLT1 transport depends on which ion?", opt:["K+","Cl-","Na+","Ca++"], ans:2, topic:"Bio-chem", ex:"Secondary active transport via Sodium.", weak:"Dependency error.", rev:["SGLT = Sodium"], ref:"#"},
+        {q:"Mechanism of Acarbose?", opt:["SGLT2 inhibitor","Alpha-glucosidase inhibitor","Insulin sensitizer","DPP4 inhibitor"], ans:1, topic:"Drugs", ex:"Slows carb digestion.", weak:"Drug mechanism error.", rev:["Acarbose = Alpha-glucosidase"], ref:"#"},
+        {q:"Main transporter for Fructose?", opt:["GLUT2","GLUT5","SGLT1","SGLT2"], ans:1, topic:"Carbs", ex:"Fructose uses GLUT5.", weak:"Sugar transport error.", rev:["Fructose = GLUT5"], ref:"#"},
+        {q:"Alpha-amylase cannot hydrolyze:", opt:["Alpha 1-4 bonds","Alpha 1-6 bonds","Beta 1-4 bonds","Sucrose"], ans:1, topic:"Digestion", ex:"Branch points (1-6) require other enzymes.", weak:"Enzyme limitation error.", rev:["Amylase = 1-4 only"], ref:"#"},
+        {q:"Primary symptom of Lactase deficiency?", opt:["Constipation","Osmotic Diarrhea","Fever","Rash"], ans:1, topic:"Patho", ex:"Undigested lactose pulls water.", weak:"Patho mechanism error.", rev:["Lactose = Osmotic Diarrhea"], ref:"#"},
+        {q:"Gliflozins (SGLT2 inhibitors) act in:", opt:["Small Intestine","Proximal Tubule of Kidney","Liver","Muscle"], ans:1, topic:"Pharmacology", ex:"They block glucose reabsorption in kidneys.", weak:"Site of action error.", rev:["SGLT2 = Kidney"], ref:"#"},
+        {q:"Isomaltase breaks which bond?", opt:["1-4","1-6","Beta-link","Hydrogen"], ans:1, topic:"Enzymes", ex:"Cleaves the branch points.", weak:"Enzyme function error.", rev:["Isomaltase = 1-6"], ref:"#"},
+        {q:"H2 Breath test detects:", opt:["Acidosis","Bacterial fermentation","Liver failure","Ulcers"], ans:1, topic:"Diagnostics", ex:"Bacteria produce H2 from malabsorbed carbs.", weak:"Diagnostic test error.", rev:["H2 = Bacteria"], ref:"#"},
+        {q:"Gastric HCl has what effect on Amylase?", opt:["Activates","Denatures/Inactivates","No effect","Speeds up"], ans:1, topic:"Digestion", ex:"Amylase is neutralized by stomach acid.", weak:"Digestion error.", rev:["Acid stops Amylase"], ref:"#"}
+    ]
+};
+
+/* ENGINE */
+function navTo(t){
+    user=document.getElementById("username").value;
+    if(!user) return alert("Please enter your name!");
+    track=t;
+    document.getElementById("login-screen").style.display="none";
+    if(t==='pharma') startQuiz('pharma');
+    else document.getElementById("mode-screen").style.display="block";
+}
+
+function startSub(s){ startQuiz(track+"_"+s); }
+
+function startQuiz(b){
+    activeQ=banks[b]; current=0; answers=[]; running=true; timerStart=Date.now();
+    document.getElementById("mode-screen").style.display="none";
+    document.getElementById("login-screen").style.display="none";
+    document.getElementById("quiz-screen").style.display="block";
+    showQ();
+}
+
+function showQ(){
+    let q=activeQ[current];
+    let html=`<div class="card"><h3 style="color:var(--primary)">Question ${current+1} of 10</h3><p style="font-size:18px; line-height:1.4">${q.q}</p></div>`;
+    q.opt.forEach((o,i)=>{ html+=`<div class="option ${answers[current]===i?'selected':''}" onclick="sel(${i})">${o}</div>`; });
+    document.getElementById("quiz-container").innerHTML=html;
+    document.getElementById("next-btn").style.display=current===9?"none":"block";
+    document.getElementById("submit-btn").style.display=current===9?"block":"none";
+}
+
+function sel(i){ answers[current]=i; showQ(); }
+
+function nextQ(){ if(answers[current]===undefined) return alert("Select an answer!"); current++; showQ(); }
+
+function finish(){
+    if(answers[current]===undefined) return alert("Select an answer!");
+    running=false; let score=0, weak="", review="";
+    activeQ.forEach((q,i)=>{
+        let corr=answers[i]===q.ans; if(corr) score++;
+        else {
+            weak+=`<div class="weak-card">
+                <span style="color:var(--danger); font-weight:bold">❌ Analysis:</span> ${q.weak}<br>
+                <ul class="revise-list">${q.rev.map(r=>`<li>${r}</li>`).join('')}</ul>
+                ${q.img?`<img src="${q.img}" class="explanation-img">`:""}
+            </div>`;
+        }
+        review+=`<div class="card" style="border-left:6px solid ${corr?'var(--success)':'var(--danger)'}">
+            <b>Q: ${q.q}</b><br>
+            <span style="color:${corr?'var(--success)':'var(--danger)'}">Your answer: ${q.opt[answers[i]] || 'None'}</span><br>
+            <span style="color:var(--success)">Correct: ${q.opt[q.ans]}</span><br>
+            <p style="margin:10px 0; font-size:14px; color:#64748B">${q.ex}</p>
+            ${q.ref!=='#'?`<a href="${q.ref}" target="_blank" class="ref-tag">Scientific Reference ↗</a>`:""}
+        </div>`;
+    });
+    document.getElementById("quiz-screen").style.display="none";
+    document.getElementById("result-screen").style.display="block";
+    document.getElementById("score-box").innerHTML=`<h1 style="margin:0">${score}/10</h1><p>Performance review for ${user}</p>`;
+    document.getElementById("weak-points").innerHTML=weak;
+    document.getElementById("review-box").innerHTML=review;
+}
+
+setInterval(()=>{
+    if(!running) return;
+    let s=Math.floor((Date.now()-timerStart)/1000);
+    document.getElementById("time").innerText=String(Math.floor(s/60)).padStart(2,'0')+":"+String(s%60).padStart(2,'0');
+},1000);
+</script>
+</body>
+</html>
