@@ -262,4 +262,230 @@ const banks = {
     ],
     dentist_clinical: [
         {q:"60yo smoker with exposed roots and decay. Main organism?", opt:["Actinomyces","S. Mutans","P. Gingivalis","S. Aureus"], ans:0, topic:"Root Caries", ex:"Root surface caries involve Actinomyces.", weak:"Root flora identification.", rev:["Root = Actinomyces"], ref:"#", img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Root_Caries.jpg/400px-Root_Caries.jpg"},
-        {q:"Severe pain 3 days after lower molar extraction, foul odor:", opt:["Dry Socket","Normal healing","Infection","Nerve damage"], ans:0, topic:"Post-op", ex:"Classic presentation of Alveolar Osteitis.", weak:"Post-op complication
+        {q:"Severe pain 3 days after lower molar extraction, foul odor:", opt:["Dry Socket","Normal healing","Infection","Nerve damage"], ans:0, topic:"Post-op", ex:"Classic presentation of Alveolar Osteitis.", weak:"Post-op complication diagnosis.", rev:["Post-op Pain = Dry Socket"], ref:"#"},
+        {q:"Sharp, lingering pain to cold/heat, keeps patient awake:", opt:["Reversible Pulpitis","Irreversible Pulpitis","Necrosis","Sclerosis"], ans:1, topic:"Pulp", ex:"Spontaneous night pain is irreversible.", weak:"Pulp status error.", rev:["Night Pain = Irreversible"], ref:"#"},
+        {q:"Radiograph shows radio-opaque fragment in a lucent area of bone:", opt:["Sequestrum","Involucrum","Osteoma","Odontoma"], ans:0, topic:"Radiology", ex:"Radiographic appearance of sequestrum in osteomyelitis.", weak:"Radiographic term error.", rev:["Dead fragment = Sequestrum"], ref:"https://radiopaedia.org/articles/sequestrum"},
+        {q:"Child with decay on all upper incisors, lower incisors spared:", opt:["ECC","Chronic caries","Fluorosis","Hypoplasia"], ans:0, topic:"Pedo", ex:"Nursing bottle pattern spares lower teeth (tongue coverage).", weak:"ECC pattern recognition.", rev:["Upper front decay = ECC"], ref:"#"},
+        {q:"Pinkish flesh growing out of a large carious molar:", opt:["Pulp Polyp","Abscess","Cyst","Epulis"], ans:0, topic:"Pulp", ex:"Chronic Hyperplastic Pulpitis (Pulp Polyp).", weak:"Diagnosis error.", rev:["Pulp Polyp = Flesh in tooth"], ref:"#"},
+        {q:"Which zone of dentinal caries contains no bacteria?", opt:["Transparent/Sclerotic","Infected","Necrotic","Destruction"], ans:0, topic:"Histology", ex:"Transparent zone is a reaction, no bacteria.", weak:"Dentin zones error.", rev:["Transparent = No bacteria"], ref:"#"},
+        {q:"Best treatment for dry socket?", opt:["Antibiotics","Irrigation & Dressing","Re-extraction","Curettage"], ans:1, topic:"Surgery", ex:"Irrigation and Alveogyl/Dressing is standard.", weak:"Management error.", rev:["Dry socket = Wash & Dress"], ref:"#"},
+        {q:"A fluid-filled sac at the apex of a non-vital tooth:", opt:["Granuloma","Radicular Cyst","Abscess","Ameloblastoma"], ans:1, topic:"Pathology", ex:"Cysts are fluid filled/lined by epithelium.", weak:"Lesion type error.", rev:["Fluid = Cyst"], ref:"#"},
+        {q:"Pain on percussion usually indicates:", opt:["Pulpitis","Periapical inflammation","Caries","Gingivitis"], ans:1, topic:"Clinical", ex:"Percussion tests the PDL/periapical status.", weak:"Clinical test error.", rev:["Percussion = Periapical"], ref:"#"}
+    ],
+    pharma: [
+        {q:"Main glucose transporter in the liver?", opt:["GLUT1","GLUT2","GLUT4","SGLT1"], ans:1, topic:"Transporters", ex:"GLUT2 is a high-capacity transporter.", weak:"Transporter error.", rev:["Liver = GLUT2"], ref:"#"},
+        {q:"SGLT1 transport depends on which ion?", opt:["K+","Cl-","Na+","Ca++"], ans:2, topic:"Bio-chem", ex:"Secondary active transport via Sodium.", weak:"Dependency error.", rev:["SGLT = Sodium"], ref:"#"},
+        {q:"Mechanism of Acarbose?", opt:["SGLT2 inhibitor","Alpha-glucosidase inhibitor","Insulin sensitizer","DPP4 inhibitor"], ans:1, topic:"Drugs", ex:"Slows carb digestion.", weak:"Drug mechanism error.", rev:["Acarbose = Alpha-glucosidase"], ref:"#"},
+        {q:"Main transporter for Fructose?", opt:["GLUT2","GLUT5","SGLT1","SGLT2"], ans:1, topic:"Carbs", ex:"Fructose uses GLUT5.", weak:"Sugar transport error.", rev:["Fructose = GLUT5"], ref:"#"},
+        {q:"Alpha-amylase cannot hydrolyze:", opt:["Alpha 1-4 bonds","Alpha 1-6 bonds","Beta 1-4 bonds","Sucrose"], ans:1, topic:"Digestion", ex:"Branch points (1-6) require other enzymes.", weak:"Enzyme limitation error.", rev:["Amylase = 1-4 only"], ref:"#"},
+        {q:"Primary symptom of Lactase deficiency?", opt:["Constipation","Osmotic Diarrhea","Fever","Rash"], ans:1, topic:"Patho", ex:"Undigested lactose pulls water.", weak:"Patho mechanism error.", rev:["Lactose = Osmotic Diarrhea"], ref:"#"},
+        {q:"Gliflozins (SGLT2 inhibitors) act in:", opt:["Small Intestine","Proximal Tubule of Kidney","Liver","Muscle"], ans:1, topic:"Pharmacology", ex:"They block glucose reabsorption in kidneys.", weak:"Site of action error.", rev:["SGLT2 = Kidney"], ref:"#"},
+        {q:"Isomaltase breaks which bond?", opt:["1-4","1-6","Beta-link","Hydrogen"], ans:1, topic:"Enzymes", ex:"Cleaves the branch points.", weak:"Enzyme function error.", rev:["Isomaltase = 1-6"], ref:"#"},
+        {q:"H2 Breath test detects:", opt:["Acidosis","Bacterial fermentation","Liver failure","Ulcers"], ans:1, topic:"Diagnostics", ex:"Bacteria produce H2 from malabsorbed carbs.", weak:"Diagnostic test error.", rev:["H2 = Bacteria"], ref:"#"},
+        {q:"Gastric HCl has what effect on Amylase?", opt:["Activates","Denatures/Inactivates","No effect","Speeds up"], ans:1, topic:"Digestion", ex:"Amylase is neutralized by stomach acid.", weak:"Digestion error.", rev:["Acid stops Amylase"], ref:"#"}
+    ]
+};
+
+/* ============ STATE ============ */
+let user="", track="", activeQ=[], answers=[], bookmarks=[], streak=0, maxStreak=0;
+let running=false, timerStart, timerInterval, currentIndex=0, observer;
+const LETTERS=["A","B","C","D"];
+
+function navTo(t){
+    user=document.getElementById("username").value.trim();
+    if(!user) return alert("Please enter your name!");
+    track=t;
+    document.getElementById("screen-login").style.display="none";
+    if(t==='pharma') startQuiz('pharma');
+    else document.getElementById("screen-mode").style.display="flex";
+}
+function startSub(s){ startQuiz(track+"_"+s); }
+
+function startQuiz(bankKey){
+    activeQ=banks[bankKey]; answers=[]; bookmarks=activeQ.map(()=>false);
+    streak=0; maxStreak=0; currentIndex=0; running=true; timerStart=Date.now();
+
+    document.getElementById("screen-login").style.display="none";
+    document.getElementById("screen-mode").style.display="none";
+    document.getElementById("app").style.display="block";
+
+    renderFeed();
+    startTimer();
+}
+
+function renderFeed(){
+    const feed=document.getElementById("feed");
+    feed.innerHTML="";
+    activeQ.forEach((q,i)=>{
+        const slide=document.createElement("div");
+        slide.className="slide"; slide.id="slide-"+i; slide.dataset.index=i;
+        slide.innerHTML=`
+            <div class="q-topic">${q.topic}</div>
+            <h2 class="q-text"><span class="q-count mono">Q${i+1}/${activeQ.length}</span>${escapeHtml(q.q)}</h2>
+            <div class="opts">
+                ${q.opt.map((o,oi)=>`<div class="opt" data-oi="${oi}" onclick="pick(${i},${oi})"><span class="letter">${LETTERS[oi]}</span>${escapeHtml(o)}</div>`).join("")}
+            </div>
+            <div class="feedback" id="fb-${i}"></div>
+            <div class="scroll-hint" id="hint-${i}">↑ keep scrolling for the next one</div>
+        `;
+        feed.appendChild(slide);
+    });
+    updateTopbar();
+    attachObserver();
+}
+
+function escapeHtml(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function pick(i,oi){
+    if(answers[i]!==undefined) return; // locked after first answer
+    answers[i]=oi;
+    const q=activeQ[i];
+    const correct = oi===q.ans;
+
+    if(correct){ streak++; maxStreak=Math.max(maxStreak,streak); }
+    else { streak=0; }
+    updateRail();
+
+    const slide=document.getElementById("slide-"+i);
+    slide.querySelectorAll(".opt").forEach(el=>{
+        const idx=parseInt(el.dataset.oi);
+        el.classList.add("locked");
+        if(idx===q.ans) el.classList.add("correct");
+        else if(idx===oi) el.classList.add("wrong");
+    });
+
+    const fb=document.getElementById("fb-"+i);
+    fb.innerHTML=`<div class="feedback-inner">
+        <b>${correct?"Nice — that's right.":"Not quite."}</b> ${escapeHtml(q.ex)}
+        ${q.ref && q.ref!=="#" ? `<br><a class="ref-link" href="${q.ref}" target="_blank">Reference ↗</a>`:""}
+    </div>`;
+    fb.classList.add("show");
+    document.getElementById("hint-"+i).classList.add("show");
+
+    if(i===activeQ.length-1){
+        document.getElementById("finishFloat").style.display="block";
+    }
+}
+
+function toggleBookmark(){
+    bookmarks[currentIndex]=!bookmarks[currentIndex];
+    updateRail();
+}
+
+function updateRail(){
+    document.getElementById("railBookmark").classList.toggle("active", !!bookmarks[currentIndex]);
+    document.getElementById("railBookmark").textContent = bookmarks[currentIndex] ? "★" : "☆";
+    document.getElementById("streakNum").textContent = streak;
+}
+
+function updateTopbar(){
+    const pct = ((currentIndex+1)/activeQ.length)*100;
+    document.getElementById("barFill").style.width=pct+"%";
+    document.getElementById("metaCount").textContent=`Q${currentIndex+1} / ${activeQ.length}`;
+}
+
+function attachObserver(){
+    if(observer) observer.disconnect();
+    observer = new IntersectionObserver((entries)=>{
+        entries.forEach(e=>{
+            if(e.isIntersecting && e.intersectionRatio>0.6){
+                currentIndex=parseInt(e.target.dataset.index);
+                updateTopbar();
+                updateRail();
+            }
+        });
+    }, { root: document.getElementById("feed"), threshold:[0.6] });
+    document.querySelectorAll(".slide").forEach(s=>observer.observe(s));
+}
+
+function startTimer(){
+    clearInterval(timerInterval);
+    timerInterval=setInterval(()=>{
+        if(!running) return;
+        const s=Math.floor((Date.now()-timerStart)/1000);
+        document.getElementById("metaTimer").textContent =
+            String(Math.floor(s/60)).padStart(2,'0')+":"+String(s%60).padStart(2,'0');
+    },1000);
+}
+
+function scrollToResults(){
+    running=false;
+    buildResults();
+}
+
+function buildResults(){
+    let score=0;
+    activeQ.forEach((q,i)=>{ if(answers[i]===q.ans) score++; });
+    const pct=Math.round((score/activeQ.length)*100);
+
+    const feed=document.getElementById("feed");
+    feed.innerHTML="";
+    document.getElementById("topbar").style.display="none";
+    document.getElementById("rail").style.display="none";
+    document.getElementById("finishFloat").style.display="none";
+
+    // Score slide
+    const scoreSlide=document.createElement("div");
+    scoreSlide.className="slide";
+    scoreSlide.innerHTML=`
+        <div class="center-txt">
+            <div class="eyebrow" style="justify-content:center">Round complete</div>
+            <div class="score-ring" style="--pct:${pct}"><span>${score}/${activeQ.length}</span></div>
+            <h2 style="margin:0 0 4px">Solid work, Dr. ${escapeHtml(user)}.</h2>
+            <div class="pill">Best streak: ${maxStreak} 🔥</div>
+            <div class="scroll-hint show" style="justify-content:center;margin-top:30px">↑ scroll for your breakdown</div>
+        </div>`;
+    feed.appendChild(scoreSlide);
+
+    // Weak point slides (only misses)
+    activeQ.forEach((q,i)=>{
+        if(answers[i]===q.ans) return;
+        const s=document.createElement("div");
+        s.className="slide";
+        s.innerHTML=`
+            <div class="q-topic">Needs review</div>
+            <h2 class="q-text">${escapeHtml(q.weak)}</h2>
+            <div class="feedback show"><div class="feedback-inner">
+                ${q.rev.map(r=>`• ${escapeHtml(r)}`).join("<br>")}
+            </div></div>
+            ${q.img?`<img src="${q.img}" style="width:100%;border-radius:14px;margin-top:16px;border:1px solid var(--divider)">`:""}
+            <div class="scroll-hint show">↑ next</div>
+        `;
+        feed.appendChild(s);
+    });
+
+    // Full breakdown slides
+    activeQ.forEach((q,i)=>{
+        const correct=answers[i]===q.ans;
+        const s=document.createElement("div");
+        s.className="slide";
+        s.innerHTML=`
+            <div class="q-topic" style="color:${correct?'var(--ok)':'var(--danger)'};background:${correct?'rgba(0,245,160,0.1)':'rgba(255,59,92,0.1)'}">${correct?"Correct":"Missed"}</div>
+            <h2 class="q-text">${escapeHtml(q.q)}</h2>
+            <div class="feedback show"><div class="feedback-inner">
+                <b>Your answer:</b> ${escapeHtml(q.opt[answers[i]] ?? "No answer")}<br>
+                <b>Correct answer:</b> ${escapeHtml(q.opt[q.ans])}<br><br>
+                ${escapeHtml(q.ex)}
+                ${q.ref && q.ref!=="#" ? `<br><a class="ref-link" href="${q.ref}" target="_blank">Reference ↗</a>`:""}
+            </div></div>
+            <div class="scroll-hint show">↑ next</div>
+        `;
+        feed.appendChild(s);
+    });
+
+    // Restart slide
+    const end=document.createElement("div");
+    end.className="slide";
+    end.innerHTML=`
+        <div class="center-txt">
+            <div class="eyebrow" style="justify-content:center">That's the reel</div>
+            <h2 style="margin-bottom:24px">Ready for another round?</h2>
+            <button class="btn" onclick="location.reload()">Start new lesson</button>
+        </div>`;
+    feed.appendChild(end);
+}
+</script>
+</body>
+</html>
